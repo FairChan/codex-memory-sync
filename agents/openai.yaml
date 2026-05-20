@@ -1,0 +1,7 @@
+interface:
+  display_name: "Codex Memory Sync"
+  short_description: "Synchronize Codex work memory across teammates and threads."
+  icon_small: "./assets/codex-memory-sync.svg"
+  icon_large: "./assets/codex-memory-sync.svg"
+  brand_color: "#111827"
+  default_prompt: "Use $codex-memory-sync to set up external Codex working memory for this repository."
