@@ -41,13 +41,6 @@ Inside that folder it keeps:
 
 Every memory update gets a numbered memory commit. Each commit records who wrote it, when it happened, which thread wrote it, what changed, and the exact file location to read next.
 
-## Language Support
-
-SyncMind works with any project that can store files in a repository.
-
-It is language-agnostic and works with JavaScript, TypeScript, Python, Go, Rust, Java, Kotlin, Swift, C, C++, C#, PHP, Ruby, Elixir, Dart, Shell, SQL, Markdown, and mixed-language projects.
-
-The skill does not depend on your app framework. It only needs Python to run the helper script.
 
 ## Install
 
