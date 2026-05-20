@@ -25,12 +25,20 @@ project-root/
     DECISIONS.md
     RISKS.md
     DEPLOYMENT.md
+    MEMORY_COMMITS.jsonl
+    MEMORY_COMMITS.md
+    MEMORY_INDEX.md
+    SUMMARY.md
+    COMPACTION_STATE.json
     THREADS/
+    CURSORS/
+    ARCHIVE/
+    IMPORTED/
 ```
 
 ## 初始化安全规则
 
-默认初始化是非破坏性的：
+默认初始化和接手都是非破坏性的：
 
 ```text
 如果 .codex-memory/ 不存在：
@@ -50,7 +58,15 @@ project-root/
 - 如果已经有管理区块，默认不改
 ```
 
-`--force` 是兼容旧命令用的参数，不再允许覆盖。只有用户明确使用 `--replace-existing` 时才会替换已有文件，而且替换前会自动备份到 `.codex-memory/.backups/`。
+接手同事项目：
+
+```text
+python scripts/memory_sync.py adopt --project /path/to/repo --actor "你的名字" --thread "你的线程名" --record-existing
+```
+
+这会扫描已有记忆并生成一条 adoption 记忆提交，之后新线程只需要根据提交日志增量读取。
+
+`--replace-existing` 只用于明确的修复场景。正常协作不要用它。
 
 重要仓库建议先跑：
 
@@ -58,17 +74,81 @@ project-root/
 python scripts/init_memory_sync.py --project /path/to/repo --dry-run
 ```
 
+## 记忆提交日志
+
+每次记忆提交都会写入：
+
+```text
+.codex-memory/MEMORY_COMMITS.jsonl
+.codex-memory/MEMORY_COMMITS.md
+```
+
+每条提交记录：
+
+```text
+第几条记忆提交 sequence
+提交 ID
+时间
+提交人
+线程 ID
+用途 purpose
+摘要 summary
+修改了哪些记忆文件
+每个文件里的第几个条目 entry_number
+行号范围 start_line/end_line
+相关代码文件
+当前 Git 分支和 commit
+```
+
+新线程启动时先运行：
+
+```text
+python scripts/memory_sync.py sync --project /path/to/repo --thread "线程名"
+```
+
+如果已有游标，只会列出新的记忆提交和精确位置，不需要读取全部记忆。
+
+读完后运行：
+
+```text
+python scripts/memory_sync.py sync --project /path/to/repo --thread "线程名" --mark-seen
+```
+
+这样下次只会看到更新后的提交。
+
+## 记忆压缩
+
+`memory_sync.py commit` 默认会在记忆过长时自动触发压缩。压缩会：
+
+```text
+1. 把长记忆归档到 .codex-memory/ARCHIVE/
+2. 更新 .codex-memory/SUMMARY.md
+3. 写入一条 compact 记忆提交
+4. 更新 COMPACTION_STATE.json，避免每次重复压缩
+```
+
+手动压缩：
+
+```text
+python scripts/memory_sync.py compact --project /path/to/repo --actor "你的名字" --thread "线程名"
+```
+
+强制压缩：
+
+```text
+python scripts/memory_sync.py compact --project /path/to/repo --actor "你的名字" --thread "线程名" --force
+```
+
 ## 每日开工流程
 
 ```text
 1. git pull
 2. 读取 AGENTS.md
-3. 读取 .codex-memory/CURRENT_WORK.md
-4. 读取 .codex-memory/CURRENT_WORK.codex.md
-5. 读取 .codex-memory/HANDOFF.md
-6. 读取 .codex-memory/TASK_LOG.md
-7. 总结当前任务、owner、locked files、风险和下一步
-8. 确认没有文件冲突后再编辑代码
+3. 运行 memory_sync.py sync --thread <线程名>
+4. 如果没有游标，只读 SUMMARY.md、CURRENT_WORK.md、MEMORY_INDEX.md
+5. 如果有新提交，只读 sync 输出的文件位置和行号范围
+6. 总结当前任务、owner、locked files、风险和下一步
+7. 确认没有文件冲突后再编辑代码
 ```
 
 推荐口令：
@@ -81,10 +161,10 @@ python scripts/init_memory_sync.py --project /path/to/repo --dry-run
 
 ```text
 1. 总结本次修改
-2. 更新 CURRENT_WORK.md
-3. 追加 TASK_LOG.md
-4. 如果有人或新线程可能接手，更新 HANDOFF.md
-5. 如果有部署，更新 DEPLOYMENT.md
+2. 使用 memory_sync.py commit 写入线程记忆
+3. 如果有人或新线程可能接手，加 --handoff
+4. 如果影响当前任务状态，加 --current
+5. 如果有部署，记录 DEPLOYMENT.md 后把该文件作为 --memory-files 提交
 6. 运行测试或记录未测试原因
 7. git status
 8. commit
@@ -94,7 +174,7 @@ python scripts/init_memory_sync.py --project /path/to/repo --dry-run
 推荐口令：
 
 ```text
-收工。请总结本次改动，更新 .codex-memory 里的工作记忆和交接文档，记录测试结果，然后提交并推送。
+收工。请用 memory_sync.py commit 写入本线程记忆，记录测试、风险、下一步和相关文件；如记忆过长让自动压缩执行，然后提交并推送。
 ```
 
 ## 文件占用规则

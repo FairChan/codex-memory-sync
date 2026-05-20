@@ -9,7 +9,25 @@
 ## 安全初始化
 
 ```text
-请使用 $codex-memory-sync 初始化这个仓库的外部记忆。先 dry-run，说明如果 .codex-memory 已存在会保留哪些文件、会新增哪些文件。确认不会覆盖同事已有内容后再执行初始化。
+请使用 $codex-memory-sync 初始化这个仓库的外部记忆。先运行 memory_sync.py init --dry-run，说明如果 .codex-memory 已存在会保留哪些文件、会新增哪些文件。确认不会覆盖同事已有内容后再执行初始化。
+```
+
+## 接手同事项目
+
+```text
+我接手了同事已经有 .codex-memory 的项目。请运行 memory_sync.py adopt --record-existing，不要覆盖任何已有文件；然后告诉我 baseline 应该读哪些文件，以及当前最新记忆提交编号。
+```
+
+## 线程同步
+
+```text
+这是一个新线程。请运行 memory_sync.py sync --thread "<线程名>"。如果没有游标，只让我读取 SUMMARY.md、CURRENT_WORK.md、MEMORY_INDEX.md；如果有新提交，只列出我需要读取的提交编号、文件、第几个条目和行号范围。
+```
+
+## 记忆提交
+
+```text
+请用 memory_sync.py commit 提交本线程记忆，写清楚摘要、细节、相关代码文件、测试、风险和下一步。提交后检查是否触发自动压缩，并报告生成的记忆提交编号。
 ```
 
 ## 新任务
@@ -27,7 +45,7 @@
 ## 收工
 
 ```text
-收工。请总结本次改动，更新 .codex-memory 里的工作记忆和交接文档，记录测试结果，然后提交并推送。
+收工。请用 memory_sync.py commit 写入本线程记忆；如果需要交接加 --handoff，如果改变当前任务状态加 --current。记录测试结果、风险、下一步，然后提交并推送。
 ```
 
 ## 交给同事

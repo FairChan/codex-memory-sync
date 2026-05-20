@@ -76,13 +76,41 @@ Read this before editing.
 
 - This repo uses Git as code source of truth.
 - Memory source of truth is `.codex-memory/`.
+- Use `scripts/memory_sync.py sync --thread <thread-id>` before editing.
 - Do not rely on previous chat history.
-- Before editing: read CURRENT_WORK.md, HANDOFF.md, TASK_LOG.md.
-- After editing: update CURRENT_WORK.md and TASK_LOG.md.
+- After editing: use `scripts/memory_sync.py commit`.
 
 ## Current Warnings
 
 - No active warnings yet.
+```
+
+## MEMORY_COMMITS.jsonl record
+
+Each line is one JSON object:
+
+```json
+{
+  "id": "mem-abc123",
+  "sequence": 12,
+  "time": "2026-05-20T13:00:00+08:00",
+  "actor": "user-a",
+  "thread": "thread-a",
+  "purpose": "work",
+  "summary": "Finished login refresh flow",
+  "branch": "codex/login",
+  "git_commit": "abc1234",
+  "files": [
+    {
+      "path": ".codex-memory/THREADS/thread-a.md",
+      "heading": "2026-05-20 - Finished login refresh flow",
+      "entry_number": 3,
+      "start_line": 42,
+      "end_line": 78
+    }
+  ],
+  "related_files": ["app/auth.ts"]
+}
 ```
 
 ## HANDOFF.md
