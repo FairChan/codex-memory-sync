@@ -1,8 +1,4 @@
 <p align="center">
-  <img src="assets/syncmind-banner.png" alt="SyncMind - Memory That Connects" width="100%">
-</p>
-
-<p align="center">
   <img src="assets/syncmind-logo.png" alt="SyncMind logo" width="96">
 </p>
 
