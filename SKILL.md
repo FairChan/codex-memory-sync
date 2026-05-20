@@ -42,7 +42,16 @@ The script creates:
 - `.codex-memory/THREADS/.gitkeep`
 - `AGENTS.md` if missing, or a managed Codex Memory Sync block if present
 
-The script does not overwrite existing memory files unless `--force` is passed.
+Safety behavior:
+
+- If `.codex-memory/` does not exist, the script creates it and writes starter files.
+- If `.codex-memory/` already exists, the script creates only missing files and keeps existing files unchanged.
+- If a teammate already wrote their workflow into any memory file, the script does not overwrite it.
+- If `AGENTS.md` exists without a Codex Memory Sync block, the script appends one managed block and first backs up `AGENTS.md`.
+- If `AGENTS.md` already has the managed block, the script keeps it unchanged.
+- `--force` is deprecated and does not enable overwrites.
+- Use `--replace-existing` only when the user explicitly wants replacement; existing files are backed up under `.codex-memory/.backups/` before replacement.
+- Use `--dry-run` before touching important repositories to show exactly what would happen.
 
 ## Operating Workflow
 
@@ -100,4 +109,4 @@ Load these only when needed:
 
 ## Maintenance
 
-Prefer the initializer for fresh setup. For existing repos, preserve user-written content and append managed sections. Keep memory entries short, specific, and timestamped. Remove stale file locks when tasks complete.
+Prefer the initializer for fresh setup. For existing repos, preserve user-written content, create missing files only, and append managed sections only where needed. Keep memory entries short, specific, and timestamped. Remove stale file locks when tasks complete.

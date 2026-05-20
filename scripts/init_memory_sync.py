@@ -6,8 +6,8 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import os
+import shutil
 from pathlib import Path
-from typing import Iterable
 
 
 BEGIN = "<!-- BEGIN CODEX MEMORY SYNC -->"
@@ -18,38 +18,103 @@ def now_stamp() -> str:
     return dt.datetime.now().astimezone().strftime("%Y-%m-%d %H:%M %Z")
 
 
-def write_file(path: Path, content: str, force: bool) -> str:
-    if path.exists() and not force:
+def backup_stamp() -> str:
+    return dt.datetime.now().astimezone().strftime("%Y%m%d-%H%M%S")
+
+
+def ensure_dir(path: Path, dry_run: bool) -> str:
+    if path.exists():
+        return f"kept existing directory {path}"
+    if dry_run:
+        return f"would create directory {path}"
+    path.mkdir(parents=True, exist_ok=True)
+    return f"created directory {path}"
+
+
+def relative_to_project(path: Path, project: Path) -> Path:
+    try:
+        return path.resolve().relative_to(project.resolve())
+    except ValueError:
+        return Path(path.name)
+
+
+def backup_existing(path: Path, project: Path, backup_root: Path, dry_run: bool) -> str:
+    rel_path = relative_to_project(path, project)
+    backup_path = backup_root / rel_path
+    if dry_run:
+        return f"would back up {path} to {backup_path}"
+    backup_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(path, backup_path)
+    return f"backed up {path} to {backup_path}"
+
+
+def write_file(
+    path: Path,
+    content: str,
+    *,
+    replace_existing: bool,
+    dry_run: bool,
+    project: Path,
+    backup_root: Path,
+) -> str:
+    if path.exists() and not replace_existing:
         return f"kept existing {path}"
+    if path.exists():
+        backup_message = backup_existing(path, project, backup_root, dry_run)
+        if dry_run:
+            return f"{backup_message}; would replace {path}"
+    else:
+        backup_message = ""
+        if dry_run:
+            return f"would write {path}"
+
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content.rstrip() + "\n", encoding="utf-8")
-    return f"wrote {path}"
+    action = "replaced" if backup_message else "wrote"
+    return f"{backup_message + '; ' if backup_message else ''}{action} {path}"
 
 
-def append_or_replace_managed_block(path: Path, block: str, force: bool) -> str:
+def append_or_replace_managed_block(
+    path: Path,
+    block: str,
+    *,
+    replace_existing: bool,
+    dry_run: bool,
+    project: Path,
+    backup_root: Path,
+) -> str:
     if not path.exists():
-        return write_file(path, f"# Project Instructions\n\n{block}", force=True)
+        return write_file(
+            path,
+            f"# Project Instructions\n\n{block}",
+            replace_existing=False,
+            dry_run=dry_run,
+            project=project,
+            backup_root=backup_root,
+        )
 
     text = path.read_text(encoding="utf-8")
+    if (BEGIN in text) != (END in text):
+        return f"warning: kept {path}; found partial Codex Memory Sync markers that need manual repair"
+
     if BEGIN in text and END in text:
-        if not force:
+        if not replace_existing:
             return f"kept existing managed block in {path}"
+        backup_message = backup_existing(path, project, backup_root, dry_run)
         start = text.index(BEGIN)
         end = text.index(END) + len(END)
         updated = text[:start].rstrip() + "\n\n" + block + "\n" + text[end:].lstrip()
+        if dry_run:
+            return f"{backup_message}; would update managed block in {path}"
         path.write_text(updated.rstrip() + "\n", encoding="utf-8")
-        return f"updated managed block in {path}"
+        return f"{backup_message}; updated managed block in {path}"
 
     updated = text.rstrip() + "\n\n" + block + "\n"
+    backup_message = backup_existing(path, project, backup_root, dry_run)
+    if dry_run:
+        return f"{backup_message}; would append managed block to {path}"
     path.write_text(updated, encoding="utf-8")
-    return f"appended managed block to {path}"
-
-
-def bullet_lines(items: Iterable[str]) -> str:
-    values = [item.strip() for item in items if item and item.strip()]
-    if not values:
-        return "- None yet."
-    return "\n".join(f"- {item}" for item in values)
+    return f"{backup_message}; appended managed block to {path}"
 
 
 def current_work(owner: str, branch: str, task: str) -> str:
@@ -263,7 +328,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--owner", default=os.environ.get("USERNAME") or os.environ.get("USER") or "team")
     parser.add_argument("--branch", default="main", help="Initial branch name to record.")
     parser.add_argument("--task", default="Memory sync setup", help="Initial task title.")
-    parser.add_argument("--force", action="store_true", help="Overwrite existing memory files and managed AGENTS block.")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Deprecated compatibility flag. It no longer overwrites existing memory files.",
+    )
+    parser.add_argument(
+        "--replace-existing",
+        action="store_true",
+        help="Replace existing generated files after backing them up under .codex-memory/.backups/.",
+    )
+    parser.add_argument("--dry-run", action="store_true", help="Print planned actions without changing files.")
     parser.add_argument("--no-agents", action="store_true", help="Do not create or update AGENTS.md.")
     return parser.parse_args()
 
@@ -278,23 +353,95 @@ def main() -> int:
 
     memory_dir = project / ".codex-memory"
     threads_dir = memory_dir / "THREADS"
-    threads_dir.mkdir(parents=True, exist_ok=True)
+    backup_root = memory_dir / ".backups" / backup_stamp()
+    replace_existing = args.replace_existing
 
-    actions = [
-        write_file(memory_dir / "CURRENT_WORK.md", current_work(args.owner, args.branch, args.task), args.force),
-        write_file(memory_dir / "CURRENT_WORK.codex.md", quick_context(), args.force),
-        write_file(memory_dir / "HANDOFF.md", handoff(args.owner, args.branch, args.task), args.force),
-        write_file(memory_dir / "TASK_LOG.md", task_log(args.owner, args.branch), args.force),
-        write_file(memory_dir / "DECISIONS.md", decisions(), args.force),
-        write_file(memory_dir / "RISKS.md", risks(), args.force),
-        write_file(memory_dir / "DEPLOYMENT.md", deployment(), args.force),
-        write_file(threads_dir / ".gitkeep", "", args.force),
-    ]
+    actions = []
+    if args.force and not args.replace_existing:
+        actions.append("notice: --force is deprecated and did not enable overwrites; use --replace-existing for backed-up replacement")
+
+    actions.extend([
+        ensure_dir(memory_dir, args.dry_run),
+        ensure_dir(threads_dir, args.dry_run),
+        write_file(
+            memory_dir / "CURRENT_WORK.md",
+            current_work(args.owner, args.branch, args.task),
+            replace_existing=replace_existing,
+            dry_run=args.dry_run,
+            project=project,
+            backup_root=backup_root,
+        ),
+        write_file(
+            memory_dir / "CURRENT_WORK.codex.md",
+            quick_context(),
+            replace_existing=replace_existing,
+            dry_run=args.dry_run,
+            project=project,
+            backup_root=backup_root,
+        ),
+        write_file(
+            memory_dir / "HANDOFF.md",
+            handoff(args.owner, args.branch, args.task),
+            replace_existing=replace_existing,
+            dry_run=args.dry_run,
+            project=project,
+            backup_root=backup_root,
+        ),
+        write_file(
+            memory_dir / "TASK_LOG.md",
+            task_log(args.owner, args.branch),
+            replace_existing=replace_existing,
+            dry_run=args.dry_run,
+            project=project,
+            backup_root=backup_root,
+        ),
+        write_file(
+            memory_dir / "DECISIONS.md",
+            decisions(),
+            replace_existing=replace_existing,
+            dry_run=args.dry_run,
+            project=project,
+            backup_root=backup_root,
+        ),
+        write_file(
+            memory_dir / "RISKS.md",
+            risks(),
+            replace_existing=replace_existing,
+            dry_run=args.dry_run,
+            project=project,
+            backup_root=backup_root,
+        ),
+        write_file(
+            memory_dir / "DEPLOYMENT.md",
+            deployment(),
+            replace_existing=replace_existing,
+            dry_run=args.dry_run,
+            project=project,
+            backup_root=backup_root,
+        ),
+        write_file(
+            threads_dir / ".gitkeep",
+            "",
+            replace_existing=replace_existing,
+            dry_run=args.dry_run,
+            project=project,
+            backup_root=backup_root,
+        ),
+    ])
 
     if not args.no_agents:
-        actions.append(append_or_replace_managed_block(project / "AGENTS.md", agents_block(), args.force))
+        actions.append(
+            append_or_replace_managed_block(
+                project / "AGENTS.md",
+                agents_block(),
+                replace_existing=replace_existing,
+                dry_run=args.dry_run,
+                project=project,
+                backup_root=backup_root,
+            )
+        )
 
-    print("Codex memory sync initialization complete.")
+    print("Codex memory sync initialization dry run complete." if args.dry_run else "Codex memory sync initialization complete.")
     for action in actions:
         print(f"- {action}")
     return 0

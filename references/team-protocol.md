@@ -28,6 +28,36 @@ project-root/
     THREADS/
 ```
 
+## 初始化安全规则
+
+默认初始化是非破坏性的：
+
+```text
+如果 .codex-memory/ 不存在：
+- 创建目录
+- 创建所有 starter 记忆文件
+- 创建 THREADS/.gitkeep
+- 如果 AGENTS.md 不存在，创建 AGENTS.md
+
+如果 .codex-memory/ 已经存在：
+- 保留目录
+- 已存在的记忆文件一律不覆盖
+- 只补齐缺失的记忆文件
+- 同事已经写进去的工作流程不会被覆盖
+
+如果 AGENTS.md 已经存在：
+- 如果没有 Codex Memory Sync 管理区块，先备份，再追加管理区块
+- 如果已经有管理区块，默认不改
+```
+
+`--force` 是兼容旧命令用的参数，不再允许覆盖。只有用户明确使用 `--replace-existing` 时才会替换已有文件，而且替换前会自动备份到 `.codex-memory/.backups/`。
+
+重要仓库建议先跑：
+
+```text
+python scripts/init_memory_sync.py --project /path/to/repo --dry-run
+```
+
 ## 每日开工流程
 
 ```text

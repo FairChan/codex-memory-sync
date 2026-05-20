@@ -2,6 +2,8 @@
 
 ## AGENTS.md managed block
 
+When adding this block to an existing `AGENTS.md`, append it without deleting the user's existing instructions. Back up `AGENTS.md` before appending.
+
 ```markdown
 <!-- BEGIN CODEX MEMORY SYNC -->
 ## Codex Memory Sync
