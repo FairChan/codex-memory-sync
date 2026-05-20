@@ -19,143 +19,142 @@
 
 # SyncMind
 
-SyncMind is a Codex skill for keeping project memory in sync across people, computers, and Codex threads.
+SyncMind ialah Codex skill untuk menyelaraskan memori projek antara ahli pasukan, komputer, dan thread Codex.
 
-It does not try to make a chat session remember everything forever. Instead, it puts the working memory in your repository, records every memory change, and lets each new thread read only what changed.
+Ia tidak cuba membuat satu sesi chat mengingati semuanya selama-lamanya. Sebaliknya, ia meletakkan memori kerja di dalam repositori anda, merekod setiap perubahan memori, dan membolehkan thread baharu membaca hanya perkara yang berubah.
 
-## The Problem
+## Masalah
 
-Codex threads are useful, but they do not share the same live memory.
+Thread Codex memang berguna, tetapi ia tidak berkongsi memori hidup yang sama.
 
-In a team, that becomes painful quickly:
+Dalam pasukan, perkara ini cepat menjadi masalah:
 
-- one teammate's Codex does not know what another teammate's Codex already changed
-- a new thread cannot see the old thread's decisions
-- handoffs live in chat history instead of the project
-- everyone rereads too much context just to find what changed
-- long memory files eventually waste tokens
-- existing notes can be accidentally overwritten by a setup script
+- Codex seorang rakan pasukan tidak tahu apa yang sudah dibuat oleh Codex rakan lain
+- thread baharu tidak dapat melihat keputusan daripada thread lama
+- nota handoff tinggal dalam sejarah chat, bukan dalam projek
+- semua orang membaca terlalu banyak konteks hanya untuk mencari perubahan
+- fail memori yang panjang akhirnya membazir token
+- nota sedia ada boleh tertimpa secara tidak sengaja oleh skrip setup
 
-SyncMind keeps those parts explicit and versioned.
+SyncMind menjadikan perkara ini jelas dan boleh dijejaki dalam versi.
 
-## What It Does
+## Apa Yang Ia Lakukan
 
-SyncMind adds a `.codex-memory/` folder to your project.
+SyncMind menambah folder `.codex-memory/` ke dalam projek anda.
 
-Inside that folder it keeps:
+Di dalam folder itu, ia menyimpan:
 
-- current work and active file ownership
-- per-thread memory files
-- handoff notes
-- task logs
-- decisions, risks, and deployment notes
-- a machine-readable memory commit log
-- a human-readable memory commit log
-- per-thread sync cursors
-- compacted summaries and archives
+- kerja semasa dan pemilikan fail aktif
+- fail memori bagi setiap thread
+- nota handoff
+- log tugas
+- keputusan, risiko, dan nota deployment
+- log memory commit yang boleh dibaca mesin
+- log memory commit yang boleh dibaca manusia
+- cursor sync bagi setiap thread
+- ringkasan dan arkib yang telah dipadatkan
 
-Every memory update gets a numbered memory commit. Each commit records who wrote it, when it happened, which thread wrote it, what changed, and the exact file location to read next.
+Setiap kemas kini memori mendapat memory commit bernombor. Setiap commit merekod siapa yang menulisnya, bila ia berlaku, thread mana yang menulisnya, apa yang berubah, dan lokasi tepat untuk dibaca seterusnya.
 
+## Pemasangan
 
-## Install
-
-Install the skill from GitHub:
+Pasang skill daripada GitHub:
 
 ```bash
 python ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py --repo FairChan/codex-memory-sync --path .
 ```
 
-On Windows, the command is usually:
+Di Windows, biasanya gunakan:
 
 ```powershell
 python C:\Users\ssema\.codex\skills\.system\skill-installer\scripts\install-skill-from-github.py --repo FairChan/codex-memory-sync --path .
 ```
 
-Restart Codex after installing the skill.
+Mulakan semula Codex selepas pemasangan.
 
-## Start a New Project
+## Mulakan Projek Baharu
 
-In a brand-new project, ask Codex:
+Dalam projek baharu, minta Codex:
 
 ```text
 Use $codex-memory-sync to initialize shared memory for this repository.
 ```
 
-Or run the script directly:
+Atau jalankan skrip secara terus:
 
 ```bash
 python scripts/memory_sync.py init --project /path/to/repo --actor "your-name" --thread "your-thread"
 ```
 
-This creates `.codex-memory/` and `AGENTS.md` if needed.
+Ini akan mencipta `.codex-memory/` dan `AGENTS.md` jika perlu.
 
-It does not overwrite existing files by default.
+Secara lalai, ia tidak menimpa fail sedia ada.
 
-## Join an Existing Project
+## Sertai Projek Sedia Ada
 
-If your teammate already has `.codex-memory/`, ask Codex:
+Jika rakan pasukan anda sudah mempunyai `.codex-memory/`, minta Codex:
 
 ```text
 Use $codex-memory-sync to adopt the existing memory in this project without overwriting anything.
 ```
 
-Or run:
+Atau jalankan:
 
 ```bash
 python scripts/memory_sync.py adopt --project /path/to/repo --actor "your-name" --thread "your-thread" --record-existing
 ```
 
-This scans the existing memory and creates a first indexed memory commit if one does not already exist.
+Ini mengimbas memori sedia ada dan mencipta memory commit terindeks pertama jika belum ada.
 
-## Use It in Natural Language
+## Gunakan Dengan Bahasa Semula Jadi
 
-You can use SyncMind without remembering every command.
+Anda tidak perlu menghafal semua arahan.
 
-Start work:
+Mula bekerja:
 
 ```text
 Use $codex-memory-sync to sync this thread. Only show me new memory since my last cursor.
 ```
 
-Record progress:
+Rekod kemajuan:
 
 ```text
 Use $codex-memory-sync to commit this thread's memory. Include what changed, tests, risks, next step, and touched files.
 ```
 
-Prepare a handoff:
+Sediakan handoff:
 
 ```text
 Use $codex-memory-sync to write a handoff for my teammate. Do not overwrite existing notes.
 ```
 
-Compress long memory:
+Padatkan memori panjang:
 
 ```text
 Use $codex-memory-sync to compact the project memory and keep the latest context easy to reload.
 ```
 
-Import old notes:
+Import nota lama:
 
 ```text
 Use $codex-memory-sync to import my old thread notes into this project without replacing the current memory.
 ```
 
-## Direct Commands
+## Arahan Terus
 
-Sync this thread:
+Sync thread ini:
 
 ```bash
 python scripts/memory_sync.py sync --project /path/to/repo --thread "thread-a"
 ```
 
-After reading the reported memory locations, mark them as seen:
+Selepas membaca lokasi memori yang dilaporkan, tandakan sebagai sudah dibaca:
 
 ```bash
 python scripts/memory_sync.py sync --project /path/to/repo --thread "thread-a" --mark-seen
 ```
 
-Commit thread memory:
+Commit memori thread:
 
 ```bash
 python scripts/memory_sync.py commit \
@@ -172,42 +171,42 @@ python scripts/memory_sync.py commit \
   --current
 ```
 
-Compact memory:
+Padatkan memori:
 
 ```bash
 python scripts/memory_sync.py compact --project /path/to/repo --actor "alice" --thread "alice-thread"
 ```
 
-Check status:
+Semak status:
 
 ```bash
 python scripts/memory_sync.py status --project /path/to/repo
 ```
 
-## How Incremental Sync Saves Context
+## Cara Sync Bertambah Menjimatkan Konteks
 
-SyncMind writes every memory change to:
+SyncMind menulis setiap perubahan memori ke:
 
 ```text
 .codex-memory/MEMORY_COMMITS.jsonl
 .codex-memory/MEMORY_COMMITS.md
 ```
 
-Each record includes:
+Setiap rekod mengandungi:
 
-- memory number
-- memory id
+- nombor memori
+- ID memori
 - actor
 - thread
-- summary
-- changed memory file
-- entry number inside that file
-- line range
-- related code files
+- ringkasan
+- fail memori yang berubah
+- nombor entri dalam fail itu
+- julat baris
+- fail kod berkaitan
 
-So a new thread can read only the exact new entries instead of loading every memory file.
+Jadi thread baharu hanya perlu membaca entri baharu yang tepat, bukan semua fail memori.
 
-Example sync output:
+Contoh output sync:
 
 ```text
 New memory commits for thread `bob-thread`: 1
@@ -219,7 +218,7 @@ Read locations:
 - .codex-memory/HANDOFF.md entry #5 lines 80-116
 ```
 
-## File Layout
+## Susun Atur Fail
 
 ```text
 .codex-memory/
@@ -241,19 +240,19 @@ Read locations:
   IMPORTED/
 ```
 
-## Safety
+## Keselamatan
 
-SyncMind is conservative by default.
+SyncMind berhati-hati secara lalai.
 
-- `init` creates missing files and keeps existing files
-- `adopt` never overwrites existing memory
-- `import` copies old notes into a timestamped folder
-- `commit` appends new entries
-- `compact` archives memory before updating the summary
-- destructive replacement is not part of the normal workflow
+- `init` mencipta fail yang hilang dan mengekalkan fail sedia ada
+- `adopt` tidak pernah menimpa memori sedia ada
+- `import` menyalin nota lama ke folder bertarikh masa
+- `commit` menambah entri baharu
+- `compact` mengarkibkan memori sebelum mengemas kini ringkasan
+- penggantian yang merosakkan bukan sebahagian daripada aliran kerja biasa
 
-## Why This Exists
+## Kenapa Ini Wujud
 
-Project memory works best when it is visible.
+Memori projek paling baik apabila ia boleh dilihat.
 
-Files are easy to diff, review, commit, roll back, and share. SyncMind keeps the process simple: write down what changed, record where it was written, and let the next thread read only the new parts.
+Fail mudah di-diff, disemak, di-commit, dipulihkan, dan dikongsi. SyncMind mengekalkan proses ini ringkas: tulis apa yang berubah, rekod di mana ia ditulis, dan biarkan thread seterusnya membaca hanya bahagian baharu.
