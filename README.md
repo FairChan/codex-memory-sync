@@ -19,7 +19,7 @@
 
 # SyncMind
 
-SyncMind is a Codex skill for keeping project memory in sync across people, computers, and Codex threads.
+SyncMind is a Codex/Claude Code... skill for keeping project memory in sync across people, computers, and Codex threads.
 
 It does not try to make a chat session remember everything forever. Instead, it puts the working memory in your repository, records every memory change, and lets each new thread read only what changed.
 
