@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/syncmind-logo.png" alt="SyncMind logo" width="96">
+  <img src="assets/syncmind-logo.png" alt="SyncMind logo" width="496">
 </p>
 
 # SyncMind
